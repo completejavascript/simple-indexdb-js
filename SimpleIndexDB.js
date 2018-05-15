@@ -10,45 +10,42 @@ if (!window.indexedDB) {
   window.alert("Your browser doesn't support a stable version of IndexedDB.");
 }
 
-function SimpleIndexedDB(_dbName) {
-  this.dbName = _dbName;
-  this.dbVersionNumber = 1;
+class SimpleIndexedDB {
+  constructor(_dbName) {
+    this.dbName = _dbName;
+    this.dbVersionNumber = 1;
+  }
 
-  this.setDBVersionNumber = function(_dbVersionNumber) {
+  setDBVersionNumber(_dbVersionNumber) {
     this.dbVersionNumber = _dbVersionNumber;
   }
 
-  this.open = function(onsuccess, onerror, onupgradeneeded, objName, keyPath, objData) {
+  open(onsuccess, onerror, onupgradeneeded, objName, keyPath, objData) {
     this.objName = objName;
     this.request = window.indexedDB.open(this.dbName, this.dbVersionNumber);
-    var self = this;
 
-    this.request.onerror = function (event) {
-      onerror();
-    };
-    
-    this.request.onsuccess = function (event) {
-      // here: this = request
-      self.db = this.result;
+    this.request.onerror = event => onerror();
+    this.request.onsuccess = event => {
+      this.db = this.request.result;
       onsuccess();
     };
-    
-    this.request.onupgradeneeded = function (event) {
-      var db = event.target.result;
-      var objectStore = db.createObjectStore(objName, { keyPath: keyPath });
-      if(objData != undefined) {
-        for (var i in objData) {
-          objectStore.add(objData[i]);
+
+    this.request.onupgradeneeded = event => {
+      let db = event.target.result;
+      let objectStore = db.createObjectStore(objName, { keyPath: keyPath });
+      if (objData != undefined) {
+        for (let key in objData) {
+          objectStore.add(objData[key]);
         }
       }
       onupgradeneeded();
     }
   }
 
-  this.readAll = function (callback) {
-    var objectStore = this.db.transaction(this.objName).objectStore(this.objName);
+  readAll(callback) {
+    let objectStore = this.db.transaction(this.objName).objectStore(this.objName);
     objectStore.openCursor().onsuccess = function (event) {
-      var cursor = event.target.result;
+      let cursor = event.target.result;
       if (cursor) {
         callback(cursor);
         cursor.continue();
@@ -59,52 +56,49 @@ function SimpleIndexedDB(_dbName) {
     };
   }
 
-  this.read = function(id) {
-    var transaction = this.db.transaction([this.objName]);
-    var objectStore = transaction.objectStore(this.objName);
-    var keySearch = '' + id;
+  read(id) {
+    let transaction = this.db.transaction([this.objName]);
+    let objectStore = transaction.objectStore(this.objName);
+    let keySearch = '' + id;
 
-    return new Promise(function(resolve, reject){
-      var request = objectStore.get(id);
-      request.onerror = function (event) {
-        reject(event);
-      };
-      request.onsuccess = function (event) {
-        resolve(request.result);
-      };
+    return new Promise((resolve, reject) => {
+      let request = objectStore.get(id);
+      request.onerror = event => reject(event);
+      request.onsuccess = event => resolve(request.result);
     });
   }
 
-  this.add = function (objData) {
-    var transaction = this.db.transaction([this.objName], 'readwrite');
-    var objectStore = transaction.objectStore(this.objName);
+  add(objData) {
+    let transaction = this.db.transaction([this.objName], 'readwrite');
+    let objectStore = transaction.objectStore(this.objName);
 
-    return new Promise(function(resolve, reject){
-      var request = objectStore.add(objData);
-      request.onsuccess = function (event) {
-        resolve(event);
-      };
-  
-      request.onerror = function (event) {
-        reject(event);
-      }
+    return new Promise((resolve, reject) => {
+      let request = objectStore.add(objData);
+      request.onsuccess = event => resolve(event);
+      request.onerror = event => reject(event);
     });
   }
 
-  this.remove = function(id) {
-    var transaction = this.db.transaction([this.objName], 'readwrite');
-    var objectStore = transaction.objectStore(this.objName);
-    var keySearch = '' + id;
+  put(objData) {
+    let transaction = this.db.transaction([this.objName], 'readwrite');
+    let objectStore = transaction.objectStore(this.objName);
 
-    return new Promise(function(resolve, reject){
-      var request = objectStore.delete(id);
-      request.onerror = function (event) {
-        reject(event);
-      };
-      request.onsuccess = function (event) {
-        resolve(event);
-      };
+    return new Promise((resolve, reject) => {
+      let request = objectStore.put(objData);
+      request.onsuccess = event => resolve(event);
+      request.onerror = (event) => reject(event);
+    });
+  }
+
+  remove(id) {
+    let transaction = this.db.transaction([this.objName], 'readwrite');
+    let objectStore = transaction.objectStore(this.objName);
+    let keySearch = '' + id;
+
+    return new Promise((resolve, reject) => {
+      let request = objectStore.delete(id);
+      request.onerror = event => reject(event);
+      request.onsuccess = event => resolve(event);
     });
   }
 };
-
